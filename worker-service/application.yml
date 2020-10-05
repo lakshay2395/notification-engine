@@ -1,0 +1,6 @@
+rabbitmq_username: "guest"
+rabbitmq_password: "guest"
+rabbitmq_host: "10.0.0.6"
+rabbitmq_port: 5672
+worker_queue_name: "worker-queue"
+done_queue_name: "done-queue"

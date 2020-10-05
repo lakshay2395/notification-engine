@@ -1,0 +1,174 @@
+version: '3'
+services:
+  etcd-01:
+    image: gcr.io/etcd-development/etcd:latest
+    hostname: etcd-01
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.2
+    environment:
+      TOKEN: token-01
+      CLUSTER_STATE: new
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCDCTL_API: 2
+      CLUSTER: machine-1=http://10.0.0.2:2380,machine-2=http://10.0.0.3:2380,machine-3=http://10.0.0.4:2380
+      GET_HOSTS_FROM: "dns"
+    ports:
+      - 3379:2379
+      - 3380:2380
+    command: [ "sh","-c","etcd --data-dir=data.etcd --name machine-1 \
+                  --initial-advertise-peer-urls http://10.0.0.2:2380 --listen-peer-urls http://10.0.0.2:2380 \
+                  --advertise-client-urls http://10.0.0.2:2379 --listen-client-urls http://10.0.0.2:2379 \
+                  --initial-cluster $${CLUSTER} \
+                  --initial-cluster-state $${CLUSTER_STATE} --initial-cluster-token $${TOKEN}" ]
+  etcd-02:
+    image: gcr.io/etcd-development/etcd:latest
+    hostname: etcd-02
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.3
+    environment:
+      TOKEN: token-01
+      CLUSTER_STATE: new
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCDCTL_API: 2
+      CLUSTER: machine-1=http://10.0.0.2:2380,machine-2=http://10.0.0.3:2380,machine-3=http://10.0.0.4:2380
+      GET_HOSTS_FROM: "dns"
+    ports:
+      - 4379:2379
+      - 4380:2380
+    command: [ "sh","-c","etcd --data-dir=data.etcd --name machine-2 \
+                --initial-advertise-peer-urls http://10.0.0.3:2380 --listen-peer-urls http://10.0.0.3:2380 \
+                --advertise-client-urls http://10.0.0.3:2379 --listen-client-urls http://10.0.0.3:2379 \
+                --initial-cluster $${CLUSTER} \
+                --initial-cluster-state $${CLUSTER_STATE} --initial-cluster-token $${TOKEN}" ]
+  etcd-03:
+    image: gcr.io/etcd-development/etcd:latest
+    hostname: etcd-03
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.4
+    environment:
+      TOKEN: token-01
+      CLUSTER_STATE: new
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCDCTL_API: 2
+      CLUSTER: machine-1=http://10.0.0.2:2380,machine-2=http://10.0.0.3:2380,machine-3=http://10.0.0.4:2380
+      GET_HOSTS_FROM: "dns"
+    ports:
+      - 5379:2379
+      - 5380:2380
+    command: [ "sh","-c","etcd --data-dir=data.etcd --name machine-3 \
+                --initial-advertise-peer-urls http://10.0.0.4:2380 --listen-peer-urls http://10.0.0.4:2380 \
+                --advertise-client-urls http://10.0.0.4:2379 --listen-client-urls http://10.0.0.4:2379 \
+                --initial-cluster $${CLUSTER} \
+                --initial-cluster-state $${CLUSTER_STATE} --initial-cluster-token $${TOKEN}" ]
+
+  postgres:
+    image: postgres:11-alpine
+    container_name: postgres
+    ports:
+      - 6432:5432
+    environment:
+      POSTGRES_USER: "un"
+      POSTGRES_PASSWORD: "pass"
+      POSTGRES_DB: "ne"
+      GET_HOSTS_FROM: "dns"
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.5
+
+  rabbitmq:
+    image: rabbitmq:3
+    container_name: rabbitmq
+    ports:
+      - 6672:5672
+      - 16672:15672
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.6
+
+  app-01:
+    image: manager-service:latest
+    container_name: ne_manager_01
+    build: ""
+    command: /app/manager-service
+    ports:
+      - 8080:8080
+    environment:
+      GET_HOSTS_FROM: "dns"
+    restart: on-failure
+    depends_on:
+      - etcd-01
+      - etcd-02
+      - etcd-03
+      - postgres
+      - rabbitmq
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.7
+
+  app-02:
+    image: manager-service:latest
+    container_name: ne_manager_02
+    build: ""
+    command: /app/manager-service
+    ports:
+      - 9080:8080
+    environment:
+      GET_HOSTS_FROM: "dns"
+    restart: on-failure
+    depends_on:
+      - etcd-01
+      - etcd-02
+      - etcd-03
+      - postgres
+      - rabbitmq
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.8
+
+  app-03:
+    image: manager-service:latest
+    container_name: ne_manager_03
+    build: ""
+    command: /app/manager-service
+    ports:
+      - 10080:8080
+    environment:
+      GET_HOSTS_FROM: "dns"
+    restart: on-failure
+    depends_on:
+      - etcd-01
+      - etcd-02
+      - etcd-03
+      - postgres
+      - rabbitmq
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.9
+
+  worker-01:
+    image: worker-service:latest
+    container_name: worker_01
+    build: ""
+    command: /app/worker-service
+    environment:
+      GET_HOSTS_FROM: "dns"
+    restart: on-failure
+    depends_on:
+      - etcd-01
+      - etcd-02
+      - etcd-03
+      - postgres
+      - rabbitmq
+    networks:
+      ne-network:
+        ipv4_address: 10.0.0.10
+
+networks:
+  ne-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/16
