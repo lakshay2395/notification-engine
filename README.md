@@ -1,6 +1,6 @@
 # Notification Engine
 
-Distributed & scalable generic notification engine implementation in Golang. Architecture and implementation is inspired from [BigBen](https://github.com/walmartlabs/bigben) by Walmart labs.
+Distributed & scalable generic notification(cum cronjob) engine implementation in Golang. Architecture and implementation is inspired from [BigBen](https://github.com/walmartlabs/bigben) by Walmart labs.
 
 ## Pre-requisites
 - Docker
