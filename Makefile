@@ -13,4 +13,4 @@ docker.stop:
 	docker rmi -f manager-service:latest
 	docker rmi -f worker-service:latest
 
-start: build run
+start: docker.start
